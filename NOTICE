@@ -1,0 +1,27 @@
+THIRD PARTY DATA SOURCES AND LICENSING
+
+This tool retrieves from external databases. The licence of the OUTPUT depends on
+which columns you keep.
+
+KEGG (https://www.kegg.jp)
+  Academic use is free. COMMERCIAL USE REQUIRES A LICENCE from Pathway Solutions.
+  Any output carrying KO identifiers, KEGG pathway or module IDs, or KEGG gene IDs
+  is KEGG-derived. This includes gene_ko_map.csv, kegg_anchor_table.tsv, and the KO
+  columns of proteins_anchored.tsv.
+
+UniProt (https://www.uniprot.org)
+  CC BY 4.0. Sequences, taxonomy and annotation are freely usable with attribution.
+  proteins.fasta and taxonomy_mapping.tsv carry no commercial restriction.
+
+Europe PMC / NCBI E-utilities
+  Metadata is freely usable. Full text licensing varies per article. This tool
+  retrieves titles and abstracts only.
+
+Pfam / InterPro
+  CC0. No restriction.
+
+PRACTICAL CONSEQUENCE
+  Dropping the KO and KEGG columns leaves a freely usable commercial asset built on
+  UniProt and Pfam. If you need KO annotation commercially, licence KEGG, or
+  substitute InterPro and TIGRFAM for the enzyme families and antiSMASH for
+  biosynthetic gene clusters.

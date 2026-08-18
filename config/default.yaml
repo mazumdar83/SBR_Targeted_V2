@@ -1,0 +1,34 @@
+# bfgm defaults. Override per run on the command line.
+
+taxonomy_id: 2            # 2 = Bacteria. 2157 = Archaea. 4751 = Fungi.
+reviewed_only: true       # Swiss-Prot only. Setting false pulls TrEMBL: expect
+                          # hundreds of thousands of entries for large families,
+                          # carrying propagated annotation that cannot be trusted
+                          # at gene-symbol level. Widen per-family, not globally.
+
+literature:
+  max_papers: 80          # below 20 the gene set is thin; above 100 extraction gets noisy
+  sources: [europepmc]
+
+kegg:
+  cache_dir: data/cache/kegg
+  throttle_seconds: 0.12
+  # The global /link/genes/ko endpoint is NOT used anywhere. It is unreliable at
+  # scale. Per-organism /link/ko/<org> is the only route.
+
+uniprot:
+  throttle_seconds: 0.2
+  page_size: 500
+  pfam_axis:
+    enabled: true
+    min_count: 3          # a family needs this many on-term hits to be queried
+    top_n: 15
+
+audit:
+  verify_pmids: true
+  verify_taxa: true
+  quarantine_on_pmid_fail: true
+  quarantine_on_symbol_fail: true
+
+critic:
+  max_iterations: 3       # hard cap; report unresolved rather than looping
