@@ -2,7 +2,14 @@
 """Europe PMC retrieval for a term lexicon. Writes papers.csv and query.txt."""
 import argparse, sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
+def _repo_root() -> Path:
+    for d in Path(__file__).resolve().parents:
+        if (d / "pyproject.toml").exists():
+            return d
+    raise RuntimeError("repo root not found (no pyproject.toml above this script)")
+
+
+sys.path.insert(0, str(_repo_root() / "src"))
 from bfgm.lexicon import TermLexicon
 from bfgm.stages import s0_seed
 

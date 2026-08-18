@@ -72,10 +72,29 @@ and `entA` through `entH` matched staphylococcal enterotoxins. Substring matchin
 this dramatically worse, so matching is exact-token throughout, and every collision is
 resolved against the lexicon and written to a rejection log.
 
+## Run it in Claude Code
+
+Open the repo in Claude Code and type:
+
+```
+/map-function "iron sequestration"
+```
+
+That scaffolds the run, delegates stage 0 to the **function-seed-researcher** subagent,
+which hands off to the **microbiologist-critic** subagent for independent review, pauses
+for your confirmation, then runs stages 1 to 4 via the **pipeline-runner** subagent.
+
+`/seed-only "<term>"` stops after the gene list. `/verify-ids` checks whether PMIDs,
+gene symbols, or organism names actually resolve.
+
+The critic runs as a separate subagent deliberately: an agent that produced a gene set
+is a poor judge of whether it over-claimed, and the isolation keeps the noisy review
+work out of the main transcript.
+
 ## Install
 
 ```bash
-git clone <your-bitbucket-url> && cd bfgm
+git clone <your-repo-url> && cd bfgm
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 make test
@@ -138,8 +157,10 @@ MIT for the code. The data is another matter — KO columns make an output KEGG-
 and commercial use needs a Pathway Solutions licence, while UniProt sequences and
 taxonomy are CC BY 4.0 and unrestricted. See `NOTICE`.
 
-## Push to Bitbucket
+## Push to GitHub
 
 ```bash
-./scripts/init_repo.sh git@bitbucket.org:<workspace>/bfgm.git
+./scripts/init_repo.sh https://github.com/<user>/bfgm.git
+# or, with the gh CLI installed:
+./scripts/init_repo.sh
 ```

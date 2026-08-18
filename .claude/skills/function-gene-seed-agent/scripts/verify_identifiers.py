@@ -2,7 +2,14 @@
 """Standalone identifier resolver: PMIDs, gene symbols, organism names."""
 import argparse, sys, json
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
+def _repo_root() -> Path:
+    for d in Path(__file__).resolve().parents:
+        if (d / "pyproject.toml").exists():
+            return d
+    raise RuntimeError("repo root not found (no pyproject.toml above this script)")
+
+
+sys.path.insert(0, str(_repo_root() / "src"))
 from bfgm.clients.kegg import KeggClient
 from bfgm.clients.literature import LiteratureClient
 from bfgm.clients.uniprot import UniProtClient
