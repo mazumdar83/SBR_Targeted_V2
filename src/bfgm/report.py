@@ -32,6 +32,7 @@ SHEETS = [
     ("discovered_pfam.csv", "Discovered_Pfam", None),
     ("ko_sequence_manifest.csv", "KO_Sequences", None),
     ("ko_still_uncovered.csv", "KO_Still_Uncovered", None),
+    ("reference_map.tsv", "Reference_DB", None),
 ]
 
 

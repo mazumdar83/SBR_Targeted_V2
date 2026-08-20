@@ -25,6 +25,8 @@ stage 1  bfgm ko-map                          symbols -> KEGG KOs
 stage 2  bfgm uniprot-meta                    metadata, two axes
 stage 3  bfgm sequences                       sequences + taxonomy
 stage 4  bfgm kegg-anchor                     validates chain, finds missed KOs
+stage 5  bfgm ko-sequences                    KO-first sequences, closes gaps
+stage 6  bfgm build-db                        merged BLAST/DIAMOND reference
 ```
 
 Stage 4's `discovered_kos.csv` feeds back into the stage 0 lexicon. That loop is the
@@ -63,6 +65,17 @@ dropped. `quarantine.csv` and the `rejected_*` files are the audit trail.
 
 **Never upgrade an evidence tier.** T1 to T5 reflects the strongest single study design.
 Ten association studies do not make a T2.
+
+## Sequence retrieval runs in two directions
+
+Stage 3 is gene-first (UniProt, by symbol and Pfam). Stage 5 is KO-first (KEGG aaseq).
+Neither alone is complete: stage 3 misses KOs no seed gene retrieved, stage 5 only
+covers what KEGG has. Stage 6 merges and dedupes them into the searchable reference.
+
+Absence from the reference is not absence from biology. Systems with no KO and no
+reviewed UniProt record produce no sequences, so a genome screen cannot detect them.
+Check `ko_still_uncovered.csv` and the NOT_IN_KO rows before concluding anything is
+missing from a genome.
 
 ## Two constraints the code depends on
 

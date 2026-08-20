@@ -7,6 +7,7 @@
     bfgm sequences    --run runs/iron/         stage 3
     bfgm kegg-anchor  --run runs/iron/         stage 4
     bfgm ko-sequences --run runs/iron/         stage 5: sequences per KO (closes gaps)
+    bfgm build-db     --run runs/iron/         stage 6: merged BLAST/DIAMOND reference
     bfgm report       --run runs/iron/         build the workbook
     bfgm all          --run runs/iron/         stages 1 to 4 plus report
 """
@@ -23,7 +24,7 @@ from .clients.kegg import KeggClient
 from .clients.uniprot import UniProtClient
 from .lexicon import TermLexicon
 from .stages import (s0_seed, s1_ko, s2_uniprot_meta, s3_sequences,
-                     s4_kegg_anchor, s5_ko_sequences)
+                     s4_kegg_anchor, s5_ko_sequences, s6_reference_db)
 
 
 def _bar(label):
@@ -121,6 +122,19 @@ def cmd_ko_sequences(a):
         print(f"{len(unc)} KOs still have no sequenced representative in KEGG")
 
 
+def cmd_build_db(a):
+    st = s6_reference_db.run(Path(a.run), make_blast_db=not a.no_blast,
+                             make_diamond_db=not a.no_diamond)
+    print(f"{st['sequences']} sequences, {st['distinct_kos']} KOs")
+    print(f"  uniprot only {st['from_uniprot_only']}, kegg only {st['from_kegg_only']}, "
+          f"both {st['in_both']}, duplicates collapsed {st['duplicates_collapsed']}")
+    print(f"  fasta: {st['fasta']}")
+    print(f"  map:   {st['map']}")
+    for k, label in (("blast_db", "BLAST db"), ("diamond_db", "DIAMOND db")):
+        print(f"  {label}: {st[k] or 'not built (tool not on PATH)'}")
+    print("  see HOW_TO_SEARCH.md in the run directory")
+
+
 def cmd_report(a):
     from .report import build
     p = build(Path(a.run))
@@ -129,7 +143,7 @@ def cmd_report(a):
 
 def cmd_all(a):
     cmd_ko_map(a); cmd_uniprot_meta(a); cmd_sequences(a); cmd_kegg_anchor(a)
-    cmd_ko_sequences(a); cmd_report(a)
+    cmd_ko_sequences(a); cmd_build_db(a); cmd_report(a)
 
 
 def main(argv=None):
@@ -167,12 +181,19 @@ def main(argv=None):
                    help="fetch for every KO, not just those with no sequence from stage 3")
     p.set_defaults(func=cmd_ko_sequences)
 
+    p = sub.add_parser("build-db"); common(p)
+    p.add_argument("--no-blast", action="store_true")
+    p.add_argument("--no-diamond", action="store_true")
+    p.set_defaults(func=cmd_build_db)
+
     p = sub.add_parser("report"); common(p); p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("all"); common(p)
     p.add_argument("--seed"); p.add_argument("--keep-symbols")
     p.add_argument("--per-ko", type=int, default=5)
     p.add_argument("--all-kos", action="store_true")
+    p.add_argument("--no-blast", action="store_true")
+    p.add_argument("--no-diamond", action="store_true")
     p.set_defaults(func=cmd_all)
 
     a = ap.parse_args(argv)

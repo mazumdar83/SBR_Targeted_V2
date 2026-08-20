@@ -34,6 +34,12 @@ The term is the only thing that changes. `"bile acid 7-alpha-dehydroxylation"`,
    [stage 4] kegg-anchor ............. accession -> KEGG gene -> KO
           |                            validates the chain, finds missed KOs
           v  proteins_anchored.tsv, discovered_kos.csv --> feeds back to stage 0
+   [stage 5] ko-sequences ............ KO -> KEGG genes -> aaseq
+          |                            closes gaps stage 3 could not reach
+          v  ko_sequences.fasta
+   [stage 6] build-db ................ merge, dedupe, BLAST/DIAMOND database
+          |
+          v  <term>_reference.fasta + _reference_map.tsv + HOW_TO_SEARCH.md
 ```
 
 ## What makes it term-agnostic
@@ -113,6 +119,8 @@ many terms.
 | `bfgm uniprot-meta --run <dir>` | stage 2: metadata harvest, two axes |
 | `bfgm sequences --run <dir>` | stage 3: sequences and taxonomy |
 | `bfgm kegg-anchor --run <dir>` | stage 4: KO anchoring and validation |
+| `bfgm ko-sequences --run <dir>` | stage 5: sequences per KO, closes coverage gaps |
+| `bfgm build-db --run <dir>` | stage 6: merged, deduplicated BLAST/DIAMOND reference |
 | `bfgm report --run <dir>` | build the workbook |
 | `bfgm all --run <dir>` | stages 1 to 4 plus report |
 
@@ -137,6 +145,22 @@ The audit's four checks: every PMID must resolve, every gene symbol must resolve
 KEGG or UniProt or NCBI Gene, colliding symbols get flagged (not dropped — stage 1
 handles them), and organism names must be real taxa. Failures go to `quarantine.csv`
 with a reason. Nothing is silently dropped; the quarantine file is a deliverable.
+
+## The searchable output
+
+Stage 6 is the point of the whole thing if you are screening genomes. It merges the
+UniProt (gene-first) and KEGG (KO-first) sequences, collapses exact duplicates, and
+writes one FASTA with headers you can parse straight out of `-outfmt 6`:
+
+    >bfgm|<n>|<KO>|<gene>|<source_acc> <description> [<organism>]
+
+So a BLAST or DIAMOND hit already carries the KO and the gene symbol in `sseqid`; no
+join needed to get a KO profile out of a hit table. `HOW_TO_SEARCH.md` is written into
+the run directory with the exact commands and sensible thresholds.
+
+The two sequence directions matter. Stage 3 is gene-first and misses any KO no seed gene
+happened to retrieve; stage 5 goes KO-first and fills those in. Running only stage 3
+left 49 of 176 iron KOs with no sequence at all.
 
 ## The feedback loop
 
