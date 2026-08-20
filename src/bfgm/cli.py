@@ -6,6 +6,7 @@
     bfgm uniprot-meta --run runs/iron/         stage 2
     bfgm sequences    --run runs/iron/         stage 3
     bfgm kegg-anchor  --run runs/iron/         stage 4
+    bfgm ko-sequences --run runs/iron/         stage 5: sequences per KO (closes gaps)
     bfgm report       --run runs/iron/         build the workbook
     bfgm all          --run runs/iron/         stages 1 to 4 plus report
 """
@@ -21,7 +22,8 @@ import pandas as pd
 from .clients.kegg import KeggClient
 from .clients.uniprot import UniProtClient
 from .lexicon import TermLexicon
-from .stages import s0_seed, s1_ko, s2_uniprot_meta, s3_sequences, s4_kegg_anchor
+from .stages import (s0_seed, s1_ko, s2_uniprot_meta, s3_sequences,
+                     s4_kegg_anchor, s5_ko_sequences)
 
 
 def _bar(label):
@@ -105,6 +107,20 @@ def cmd_kegg_anchor(a):
         print(new.head(10).to_string(index=False))
 
 
+def cmd_ko_sequences(a):
+    run = Path(a.run)
+    df = s5_ko_sequences.run(run, per_ko=a.per_ko, gaps_only=not a.all_kos,
+                             progress=_bar("ko-seq"))
+    if df.empty:
+        print("no KOs to fetch (no coverage gaps, or run --all-kos)")
+        return
+    print(f"{df.KO.nunique()} KOs, {len(df)} sequences -> ko_sequences.fasta")
+    import pandas as _pd
+    unc = _pd.read_csv(run / "ko_still_uncovered.csv")
+    if len(unc):
+        print(f"{len(unc)} KOs still have no sequenced representative in KEGG")
+
+
 def cmd_report(a):
     from .report import build
     p = build(Path(a.run))
@@ -112,7 +128,8 @@ def cmd_report(a):
 
 
 def cmd_all(a):
-    cmd_ko_map(a); cmd_uniprot_meta(a); cmd_sequences(a); cmd_kegg_anchor(a); cmd_report(a)
+    cmd_ko_map(a); cmd_uniprot_meta(a); cmd_sequences(a); cmd_kegg_anchor(a)
+    cmd_ko_sequences(a); cmd_report(a)
 
 
 def main(argv=None):
@@ -143,10 +160,19 @@ def main(argv=None):
 
     p = sub.add_parser("sequences"); common(p); p.set_defaults(func=cmd_sequences)
     p = sub.add_parser("kegg-anchor"); common(p); p.set_defaults(func=cmd_kegg_anchor)
+    p = sub.add_parser("ko-sequences"); common(p)
+    p.add_argument("--per-ko", type=int, default=5,
+                   help="representative sequences per KO, one per organism")
+    p.add_argument("--all-kos", action="store_true",
+                   help="fetch for every KO, not just those with no sequence from stage 3")
+    p.set_defaults(func=cmd_ko_sequences)
+
     p = sub.add_parser("report"); common(p); p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("all"); common(p)
     p.add_argument("--seed"); p.add_argument("--keep-symbols")
+    p.add_argument("--per-ko", type=int, default=5)
+    p.add_argument("--all-kos", action="store_true")
     p.set_defaults(func=cmd_all)
 
     a = ap.parse_args(argv)

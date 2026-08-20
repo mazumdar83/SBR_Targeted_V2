@@ -30,6 +30,8 @@ SHEETS = [
     ("rejected_symbol_collisions.tsv", "Rejected_Collisions", None),
     ("rejected_ko_collisions.csv", "Rejected_KO_Collisions", None),
     ("discovered_pfam.csv", "Discovered_Pfam", None),
+    ("ko_sequence_manifest.csv", "KO_Sequences", None),
+    ("ko_still_uncovered.csv", "KO_Still_Uncovered", None),
 ]
 
 
