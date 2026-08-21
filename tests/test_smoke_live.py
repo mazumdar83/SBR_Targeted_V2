@@ -6,6 +6,7 @@ upstream API changed and the pipeline logic needs revisiting.
 import pytest
 from bfgm.clients.kegg import KeggClient
 from bfgm.clients.uniprot import UniProtClient
+from bfgm.stages import s5_ko_sequences as s5
 
 pytestmark = pytest.mark.live
 
@@ -29,3 +30,13 @@ def test_gene_exact_works():
 def test_per_organism_ko_route():
     kos = KeggClient().organism_kos("eco")
     assert len(kos) > 1000
+
+
+def test_kegg_genome_lineage_domain_filter():
+    """The constraint stage 5's domain filter is built on: KEGG's genome record still
+    carries a LINEAGE line starting with the organism's domain. Verified against eco
+    (Bacteria) and nte, Neurospora tetrasperma (Eukaryota) -- the exact fungal organism
+    that a K10531 lookup returned before this filter existed."""
+    cache = {}
+    assert s5.is_bacterial("eco", cache) is True
+    assert s5.is_bacterial("nte", cache) is False

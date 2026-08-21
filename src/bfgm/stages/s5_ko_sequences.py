@@ -16,9 +16,30 @@ Endpoint note
 ``/link/genes/<KO>`` is a *targeted* query and is reliable. This is not the same as the
 global ``/link/genes/ko`` dump, which is unreliable at scale and is used nowhere in this
 package. ``/get/<gene>/aaseq`` accepts up to 10 gene IDs joined with ``+``.
+
+Domain filter
+-------------
+A KO is a function, not a lineage: KEGG assigns the same K number across bacteria,
+archaea, and eukaryotes wherever the orthology holds. Stage 3 (UniProt) is scoped to
+Bacteria with ``--taxonomy 2``; this stage had no equivalent and would silently hand
+back whatever organism KEGG listed first, which is fungal, plant, or archaeal in some
+cases (verified: K10531 in the iron run picked *Neurospora tetrasperma* over any
+bacterium, and some coverage-gap KOs list hundreds of eukaryotic members before the
+first bacterium -- a per-organism live check tried first made stage 5 impractically
+slow for exactly that reason).
+
+``/list/organism`` would answer this in one call but currently 400s, and the FTP bulk
+taxonomy dump (``ftp.genome.jp/pub/kegg/genes/taxonomy``) is unreachable from here
+(likely the same licensed distribution the KO columns need Pathway Solutions for
+commercially, per NOTICE). What does work in one call is KEGG's own organism
+classification tree, ``/get/br:br08601`` (~500KB: domain -> Bacteria/Archaea ->
+... -> organism code). ``_load_domain_map`` fetches and parses it once per run;
+``is_bacterial`` is then a plain dict lookup, not a network call. Organisms it
+excludes are logged to ``rejected_non_bacterial_kegg.csv``, never silently dropped.
 """
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
@@ -28,6 +49,7 @@ import requests
 
 BASE = "https://rest.kegg.jp"
 UA = {"User-Agent": "bfgm/1.0 (bacterial-function-gene-mapper)"}
+_LEAF = re.compile(r"^(\S+)\s{2,}(.*)$")
 
 
 def _get(path: str, retries: int = 3, throttle: float = 0.12) -> str:
@@ -55,6 +77,49 @@ def genes_for_ko(ko: str) -> List[str]:
         if "\t" in line:
             out.append(line.split("\t")[1].strip())
     return out
+
+
+def _load_domain_map(cache: Dict[str, bool]) -> None:
+    """One bulk fetch of KEGG's organism tree; populates `cache` code -> is_bacterial.
+
+    Tree shape (see module docstring for why this endpoint): a top-level ``A`` line is
+    either ``Eukaryotes`` or ``Prokaryotes``; under ``Prokaryotes`` a ``B`` line is
+    either ``Bacteria`` or ``Archaea``. Every deeper line that isn't a further category
+    header is a leaf: ``<code>  <name>``, at whatever depth that lineage happens to
+    nest to. Bacteria is the only branch worth naming; everything else defaults False.
+    """
+    txt = _get("get/br:br08601", throttle=0.0)
+    cur_a, cur_b = None, None
+    for line in txt.split("\n"):
+        if not line or not line[0].isalpha() or not line[0].isupper():
+            continue
+        rest = line[1:].strip()
+        if line[0] == "A":
+            cur_a, cur_b = rest, None
+            continue
+        if line[0] == "B":
+            cur_b = rest
+            continue
+        m = _LEAF.match(rest)
+        if not m:
+            continue
+        code = m.group(1)
+        cache[code] = bool(cur_a and cur_a.startswith("Prokaryotes")
+                            and cur_b and cur_b.startswith("Bacteria"))
+
+
+def is_bacterial(org: str, cache: Dict[str, bool]) -> bool:
+    """True if a KEGG organism code is classified under Bacteria.
+
+    `cache` doubles as the domain map: empty means not yet loaded, so the first call
+    in a run triggers one `_load_domain_map` fetch and every call after is a dict
+    lookup. An organism code absent from the map (obsolete, or a NCBI-only genome not
+    yet organized into KEGG's tree) is treated as non-bacterial, not as bacterial by
+    default -- absence of evidence is not evidence of Bacteria.
+    """
+    if not cache:
+        _load_domain_map(cache)
+    return cache.get(org, False)
 
 
 def pick_representatives(genes: List[str], per_ko: int,
@@ -114,13 +179,21 @@ def run(run_dir: str | Path, kos: Optional[Iterable[str]] = None,
     if not kos:
         return pd.DataFrame(columns=["KO", "kegg_gene_id", "organism_code", "n_members"])
 
-    rows, fasta = [], []
+    domain_cache: Dict[str, bool] = {}
+    rows, fasta, rejected_rows = [], [], []
+    members_by_ko: Dict[str, int] = {}
     for i, ko in enumerate(kos, 1):
         try:
             members = genes_for_ko(ko)
         except Exception:
             members = []
-        reps = pick_representatives(members, per_ko, prefer_orgs)
+        members_by_ko[ko] = len(members)
+        bacterial = [g for g in members if is_bacterial(g.split(":")[0], domain_cache)]
+        rejected_orgs = {g.split(":")[0] for g in members} - {g.split(":")[0] for g in bacterial}
+        for org in sorted(rejected_orgs):
+            rejected_rows.append({"KO": ko, "organism_code": org,
+                                   "reason": "non-bacterial lineage"})
+        reps = pick_representatives(bacterial, per_ko, prefer_orgs)
         if reps:
             fasta.append(fetch_aaseq(reps))
         for g in reps:
@@ -133,10 +206,17 @@ def run(run_dir: str | Path, kos: Optional[Iterable[str]] = None,
     df = pd.DataFrame(rows)
     df.to_csv(out / "ko_sequence_manifest.csv", index=False)
     (out / "ko_sequences.fasta").write_text("\n".join(fasta) + "\n" if fasta else "")
+    pd.DataFrame(rejected_rows, columns=["KO", "organism_code", "reason"]
+                ).to_csv(out / "rejected_non_bacterial_kegg.csv", index=False)
 
     covered = set(df.KO) if not df.empty else set()
     still = sorted(set(kos) - covered)
-    pd.DataFrame({"KO": still,
-                  "reason": "no KEGG gene members; likely a KO with no sequenced representative"}
+    reasons = [
+        "no KEGG gene members; likely a KO with no sequenced representative"
+        if members_by_ko.get(ko, 0) == 0 else
+        "all KEGG members are non-bacterial (see rejected_non_bacterial_kegg.csv)"
+        for ko in still
+    ]
+    pd.DataFrame({"KO": still, "reason": reasons}
                  ).to_csv(out / "ko_still_uncovered.csv", index=False)
     return df

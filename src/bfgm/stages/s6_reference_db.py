@@ -164,8 +164,8 @@ def run(run_dir: str | Path, make_blast_db: bool = True, make_diamond_db: bool =
     if make_blast_db and shutil.which("makeblastdb"):
         dbdir.mkdir(exist_ok=True)
         subprocess.run(["makeblastdb", "-in", str(fa), "-dbtype", "prot",
-                        "-out", str(dbdir / name), "-title", f"bfgm {name}",
-                        "-parse_seqids"], check=True, capture_output=True)
+                        "-out", str(dbdir / name), "-title", f"bfgm {name}"],
+                       check=True, capture_output=True)
         stats["blast_db"] = str(dbdir / name)
     if make_diamond_db and shutil.which("diamond"):
         dbdir.mkdir(exist_ok=True)
