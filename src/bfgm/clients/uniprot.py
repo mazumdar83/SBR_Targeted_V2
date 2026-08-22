@@ -96,9 +96,6 @@ class UniProtClient:
     def by_gene_symbol(self, gene: str, fields: str = META_FIELDS) -> pd.DataFrame:
         return self.search(f"gene_exact:{gene}", fields=fields)
 
-    def by_pfam(self, pfam: str, fields: str = META_FIELDS) -> pd.DataFrame:
-        return self.search(f"xref:pfam-{pfam}", fields=fields)
-
     def by_accessions(self, accessions: Sequence[str], fields: str = FULL_FIELDS,
                       batch: int = 100, progress=None) -> pd.DataFrame:
         """Fetch full records for a known accession set. Batches of 100 stay under URL limits."""

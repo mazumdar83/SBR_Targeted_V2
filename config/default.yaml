@@ -19,10 +19,6 @@ kegg:
 uniprot:
   throttle_seconds: 0.2
   page_size: 500
-  pfam_axis:
-    enabled: true
-    min_count: 3          # a family needs this many on-term hits to be queried
-    top_n: 15
 
 audit:
   verify_pmids: true

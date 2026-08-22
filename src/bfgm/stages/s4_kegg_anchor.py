@@ -6,8 +6,8 @@ UniProt has no KO cross-reference, so the link is built in two hops:
 
 The per-organism route is used; the global /link/genes/ko endpoint is unreliable.
 
-The anchor is not just a lookup. It is the validation step: it catches domain-adjacent
-false positives that the Pfam axis let through, and it surfaces on-term KOs that the
+The anchor is not just a lookup. It is the validation step: it catches symbol-collision
+false positives that survived stage 2 curation, and it surfaces on-term KOs that the
 seed missed. Feed those back into the lexicon.
 """
 from __future__ import annotations

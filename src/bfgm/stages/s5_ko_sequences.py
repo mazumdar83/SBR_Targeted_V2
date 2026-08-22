@@ -2,8 +2,8 @@
 
 Why this stage exists
 ---------------------
-Stages 2 and 3 are gene-first: they retrieve UniProt accessions by gene symbol and Pfam
-domain, and stage 4 attaches KOs to whatever came back. A KO that no seed gene happened
+Stages 2 and 3 are gene-first: they retrieve UniProt accessions by gene symbol, and
+stage 4 attaches KOs to whatever came back. A KO that no seed gene happened
 to retrieve therefore ends up with zero sequence support, even though KEGG knows about
 it. In the iron run that was 49 of 176 KOs, clustered in the NRPS modules and ABC
 subunits.

@@ -68,7 +68,7 @@ Ten association studies do not make a T2.
 
 ## Sequence retrieval runs in two directions
 
-Stage 3 is gene-first (UniProt, by symbol and Pfam). Stage 5 is KO-first (KEGG aaseq).
+Stage 3 is gene-first (UniProt, by symbol). Stage 5 is KO-first (KEGG aaseq).
 Neither alone is complete: stage 3 misses KOs no seed gene retrieved, stage 5 only
 covers what KEGG has. Stage 6 merges and dedupes them into the searchable reference.
 

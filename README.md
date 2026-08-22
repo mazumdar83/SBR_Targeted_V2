@@ -25,8 +25,8 @@ The term is the only thing that changes. `"bile acid 7-alpha-dehydroxylation"`,
    [stage 1] ko-map .................. gene symbols -> KEGG KOs
           |                            exact token match, collision curation
           v  gene_ko_map.csv
-   [stage 2] uniprot-meta ............ metadata only, two axes
-          |                            gene symbol + discovered Pfam
+   [stage 2] uniprot-meta ............ metadata only, gene symbol
+          |                            gene_exact query, collision curation
           v  uniprot_curated.tsv
    [stage 3] sequences ............... sequences + taxonomic lineage
           |
@@ -45,17 +45,13 @@ The term is the only thing that changes. `"bile acid 7-alpha-dehydroxylation"`,
 ## What makes it term-agnostic
 
 Earlier versions of this pipeline had the target function baked in as regular
-expressions. Two mechanisms replaced that:
+expressions. The term lexicon replaced that.
 
 **The term lexicon.** Stage 0 produces `term_lexicon.json` holding synonyms,
 mechanism vocabulary, and — importantly — negative terms. Every downstream
 classification decision reads from it. Stage 1 then grows the lexicon automatically
 from the KO definitions of confirmed hits, so the classifier learns vocabulary the
 user never supplied.
-
-**Pfam discovery.** Stage 2's domain axis is not a hardcoded family list. It ranks
-Pfam families by enrichment among on-term gene-symbol hits and queries the top ones.
-Point the pipeline at a different function and it finds that function's domains.
 
 Negative terms matter more than they look. Without excluding iron-sulfur cluster
 assembly from an iron run, `iscR`, `sufB` and `iscS` swamp the extraction and the set
@@ -116,7 +112,7 @@ many terms.
 | `bfgm init-term "<term>"` | scaffold a run directory and lexicon stub |
 | `bfgm seed --run <dir>` | stage 0 machine pass (**unreviewed** — hand to the skill) |
 | `bfgm ko-map --run <dir>` | stage 1: symbols to KOs |
-| `bfgm uniprot-meta --run <dir>` | stage 2: metadata harvest, two axes |
+| `bfgm uniprot-meta --run <dir>` | stage 2: metadata harvest, gene symbol |
 | `bfgm sequences --run <dir>` | stage 3: sequences and taxonomy |
 | `bfgm kegg-anchor --run <dir>` | stage 4: KO anchoring and validation |
 | `bfgm ko-sequences --run <dir>` | stage 5: sequences per KO, closes coverage gaps |

@@ -33,8 +33,6 @@ Read `rejected_ko_collisions.csv` and report anything that looks like a wrong re
 **After uniprot-meta.** Read `rejected_symbol_collisions.tsv` before running sequences.
 This is where the money is: gene symbols collide heavily and the rejections tell you
 whether the lexicon is doing its job. Report the biggest rejection groups by symbol.
-Also check `discovered_pfam.csv` — if it is empty, the Pfam axis found nothing and
-coverage will be gene-symbol only.
 
 **After sequences.** Check for `WARNING_non_bacterial.tsv`. If it exists, the taxonomy
 filter leaked and the run is not clean.
